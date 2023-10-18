@@ -59,6 +59,9 @@ class CSPMiddleware(MiddlewareMixin):
         if request.path_info.startswith(prefixes):
             return response
 
+        prefixes = getattr(settings, 'CSP_INCLUDE_URL_PREFIXES', ())
+        if not(prefixes and request.path_info.startswith(prefixes)):
+            return response
         # Check for debug view
         status_code = response.status_code
         exempted_debug_codes = (
