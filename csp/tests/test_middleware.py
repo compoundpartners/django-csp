@@ -30,9 +30,53 @@ def test_exempt():
     assert HEADER not in response
 
 
-@override_settings(CSP_EXCLUDE_URL_PREFIXES=('/inlines-r-us'))
-def text_exclude():
+@override_settings(CSP_EXCLUDE_URL_PREFIXES=('/inlines-r-us',))
+def test_exclude():
+    # Named `text_exclude` until now, so pytest never collected it and the
+    # exclude path was untested.
     request = rf.get('/inlines-r-us/foo')
+    response = HttpResponse()
+    mw.process_response(request, response)
+    assert HEADER not in response
+
+
+# -- CSP_INCLUDE_URL_PREFIXES -------------------------------------------------
+# This fork's divergence from upstream: the header is opt-in per URL prefix.
+# Everything above runs with ('/',) from csp.tests.settings, i.e. the whole site
+# opted in; these cover the setting itself.
+
+@override_settings(CSP_INCLUDE_URL_PREFIXES=())
+def test_no_header_when_no_prefix_included():
+    request = rf.get('/')
+    response = HttpResponse()
+    mw.process_response(request, response)
+    assert HEADER not in response
+
+
+@override_settings(CSP_INCLUDE_URL_PREFIXES=('/secure',))
+def test_header_on_included_prefix():
+    request = rf.get('/secure/page')
+    response = HttpResponse()
+    mw.process_response(request, response)
+    assert HEADER in response
+
+
+@override_settings(CSP_INCLUDE_URL_PREFIXES=('/secure',))
+def test_no_header_outside_included_prefix():
+    request = rf.get('/elsewhere/page')
+    response = HttpResponse()
+    mw.process_response(request, response)
+    assert HEADER not in response
+
+
+@override_settings(
+    CSP_INCLUDE_URL_PREFIXES=('/secure',),
+    CSP_EXCLUDE_URL_PREFIXES=('/secure/legacy',),
+)
+def test_exclude_wins_over_include():
+    # The exclude check runs first, so a path matching both is excluded. That
+    # ordering is what makes 'whole site except the admin' expressible.
+    request = rf.get('/secure/legacy/page')
     response = HttpResponse()
     mw.process_response(request, response)
     assert HEADER not in response

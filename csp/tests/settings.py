@@ -5,6 +5,13 @@ CSP_REPORT_ONLY = False
 
 CSP_INCLUDE_NONCE_IN = ['default-src']
 
+# This fork makes the header opt-in per URL prefix (see CSPMiddleware
+# .process_response): with no prefix listed, nothing is ever sent. Upstream's
+# tests all assume a header is produced for '/', so the suite has to opt in --
+# otherwise 14 of them fail for a reason that has nothing to do with what they
+# are testing. test_middleware covers the setting itself.
+CSP_INCLUDE_URL_PREFIXES = ('/',)
+
 DATABASES = {
     'default': {
         'NAME': 'test.db',
